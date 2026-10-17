@@ -45,9 +45,9 @@ inicio_servicio = time.time()
 
 @app.on_event("startup")
 async def cargar():
-    global modelo, feature_cols, metricas_modelo
+    global modelo, feature_cols, metricas_modelo, scaler
     logger.info("Cargando modelo PyTorch...")
-    modelo, feature_cols, metricas_modelo = cargar_modelo()
+    modelo, feature_cols, metricas_modelo, scaler = cargar_modelo()
     logger.info(f"Modelo cargado. Features: {feature_cols}")
 
 
@@ -55,10 +55,8 @@ async def cargar():
 # ESQUEMAS
 # =============================================================================
 class PredictRequest(BaseModel):
-    num_compras_categoria: int = Field(..., ge=0)
     num_vistas_categoria: int = Field(..., ge=0)
     num_clics_categoria: int = Field(..., ge=0)
-    total_gastado_categoria: float = Field(..., ge=0)
     dias_ultima_compra: int = Field(..., ge=0)
     frecuencia_compra: int = Field(..., ge=0)
     ticket_promedio: float = Field(..., ge=0)
@@ -102,7 +100,7 @@ async def predict(request: PredictRequest):
     inicio = time.time()
     try:
         datos = pd.DataFrame([request.dict()])[feature_cols]
-        prediccion = float(predecir(modelo, datos)[0])
+        prediccion = float(predecir(modelo, datos, scaler)[0])
         tiempo_ms = (time.time() - inicio) * 1000
         metrics_store.record_latency(tiempo_ms)
         metrics_store.record_prediction()
@@ -134,7 +132,7 @@ async def predict_batch(request: BatchPredictRequest):
         raise HTTPException(status_code=503, detail="Modelo no cargado")
     inicio = time.time()
     datos = pd.DataFrame([r.dict() for r in request.registros])[feature_cols]
-    predicciones = predecir(modelo, datos)
+    predicciones = predecir(modelo, datos, scaler)
     metrics_store.record_latency((time.time() - inicio) * 1000 / max(len(predicciones), 1))
     return {
         "predicciones": [round(float(p), 4) for p in predicciones],
@@ -157,6 +155,22 @@ async def modelo_info():
             "dropout": 0.3,
             "salida": "Sigmoid",
         },
+    }
+
+
+@app.get("/metricas")
+async def metricas_ia():
+    if modelo is None:
+        raise HTTPException(status_code=503, detail="Modelo no cargado")
+    m = metricas_modelo or {}
+    return {
+        "accuracy": m.get("accuracy", 0),
+        "precision": m.get("precision", 0),
+        "recall": m.get("recall", 0),
+        "f1_score": m.get("f1_score", 0),
+        "roc_auc": m.get("roc_auc", 0),
+        "features": feature_cols,
+        "version": "1.0.0",
     }
 
 

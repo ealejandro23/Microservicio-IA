@@ -200,7 +200,7 @@ def cargar_modelo():
     return modelo, data["feature_cols"], data["metricas"], scaler
 
 
-TEMPERATURA = 50.0  # suaviza probabilidades (evita 1.0 constante)
+TEMPERATURA = 100.0  # suaviza probabilidades (evita 1.0 constante)
 
 
 def predecir(modelo, datos, scaler=None):
