@@ -23,6 +23,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.preprocessing import StandardScaler
 
 DATOS_DIR = os.getenv(
     "DATOS_DIR", os.path.join(os.path.dirname(__file__), "datos", "datos_tratados")
@@ -160,7 +161,7 @@ def evaluar_modelo(modelo, X_test, y_test):
     return metricas
 
 
-def guardar_modelo(modelo, feature_cols, metricas):
+def guardar_modelo(modelo, feature_cols, metricas, scaler=None):
     joblib.dump(
         {
             "state_dict": modelo.state_dict(),
@@ -171,6 +172,8 @@ def guardar_modelo(modelo, feature_cols, metricas):
                 "hidden_dims": modelo.hidden_dims,
                 "dropout_rate": modelo.dropout_rate,
             },
+            "scaler_mean": scaler.mean_.tolist() if scaler is not None else None,
+            "scaler_scale": scaler.scale_.tolist() if scaler is not None else None,
             "version": "1.0.0",
         },
         MODELO_PATH,
@@ -186,13 +189,31 @@ def cargar_modelo():
     modelo = RecommenderNet(arq["input_dim"], arq["hidden_dims"], arq["dropout_rate"])
     modelo.load_state_dict(data["state_dict"])
     modelo.eval()
-    return modelo, data["feature_cols"], data["metricas"]
+    scaler = None
+    if data.get("scaler_mean") is not None:
+        scaler = StandardScaler()
+        scaler.mean_ = np.array(data["scaler_mean"])
+        scaler.scale_ = np.array(data["scaler_scale"])
+        scaler.var_ = scaler.scale_ ** 2
+        scaler.n_features_in_ = len(data["feature_cols"])
+        scaler.feature_names_in_ = np.array(data["feature_cols"])
+    return modelo, data["feature_cols"], data["metricas"], scaler
 
 
-def predecir(modelo, datos):
+TEMPERATURA = 50.0  # suaviza probabilidades (evita 1.0 constante)
+
+
+def predecir(modelo, datos, scaler=None):
     modelo.eval()
+    if scaler is not None:
+        datos = pd.DataFrame(
+            scaler.transform(datos), columns=datos.columns, index=datos.index
+        )
     with torch.no_grad():
-        return modelo(torch.FloatTensor(datos.values)).numpy().flatten()
+        logits = modelo.hidden_layers(torch.FloatTensor(datos.values))
+        logits = modelo.output_layer(logits)
+        probs = torch.sigmoid(logits / TEMPERATURA).numpy().flatten()
+    return probs
 
 
 def main():
@@ -207,15 +228,25 @@ def main():
     with open(os.path.join(DATOS_DIR, "feature_cols.json")) as f:
         feature_cols = json.load(f)
 
-    modelo = entrenar_modelo(X_train, y_train, X_test, y_test)
-    metricas = evaluar_modelo(modelo, X_test, y_test)
+    # Estandarizar features (media 0, varianza 1)
+    scaler = StandardScaler()
+    scaler.fit(X_train[feature_cols])
+    X_train_scaled = pd.DataFrame(
+        scaler.transform(X_train[feature_cols]), columns=feature_cols, index=X_train.index
+    )
+    X_test_scaled = pd.DataFrame(
+        scaler.transform(X_test[feature_cols]), columns=feature_cols, index=X_test.index
+    )
+
+    modelo = entrenar_modelo(X_train_scaled, y_train, X_test_scaled, y_test)
+    metricas = evaluar_modelo(modelo, X_test_scaled, y_test)
 
     if metricas["f1_score"] < UMBRAL_METRICA:
         raise SystemExit(
             f"F1 {metricas['f1_score']:.4f} menor al umbral {UMBRAL_METRICA}"
         )
 
-    guardar_modelo(modelo, feature_cols, metricas)
+    guardar_modelo(modelo, feature_cols, metricas, scaler)
     print("\nENTRENAMIENTO COMPLETADO")
 
 
