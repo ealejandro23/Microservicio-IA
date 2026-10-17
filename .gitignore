@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Datos generados (el pipeline los crea)
+datos/datos_tratados/
+*.pkl
+
+# Entorno
+.env
+
+# Sistema
+.DS_Store
+Thumbs.db
