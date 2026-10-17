@@ -84,7 +84,7 @@ class BatchPredictRequest(BaseModel):
 async def health():
     uptime = time.time() - inicio_servicio
     m = get_metrics()
-    ok = m["latency"]["status"] == "ok" and m["errors"]["status"] == "ok"
+    ok = m["latencia"]["status"] == "ok" and m["errores"]["status"] == "ok"
     return {
         "status": "ok" if (modelo is not None and ok) else "degraded",
         "modelo_cargado": modelo is not None,

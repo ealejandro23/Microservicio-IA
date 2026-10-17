@@ -106,6 +106,6 @@ def get_metrics() -> Dict:
 def health_check() -> Dict:
     m = get_metrics()
     return {
-        "status": "ok" if m["latency"]["status"] == "ok" else "warning",
+        "status": "ok" if m["latencia"]["status"] == "ok" else "warning",
         "latencia_p95_ms": m["latencia"]["p95_ms"],
     }
