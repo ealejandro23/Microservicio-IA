@@ -245,8 +245,8 @@ def crear_variables_modelo(transacciones, clickstream, productos, usuarios):
 # 4. SEPARACION TRAIN/TEST
 # =============================================================================
 FEATURE_COLS = [
-    "num_vistas_categoria", "num_clics_categoria",
-    "dias_ultima_compra", "frecuencia_compra",
+    "num_vistas_categoria", "num_clics_categoria", "num_compras_categoria",
+    "total_gastado_categoria", "dias_ultima_compra", "frecuencia_compra",
     "ticket_promedio", "edad", "acepta_marketing",
 ]
 

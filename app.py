@@ -57,6 +57,8 @@ async def cargar():
 class PredictRequest(BaseModel):
     num_vistas_categoria: int = Field(..., ge=0)
     num_clics_categoria: int = Field(..., ge=0)
+    num_compras_categoria: int = Field(..., ge=0)
+    total_gastado_categoria: float = Field(..., ge=0)
     dias_ultima_compra: int = Field(..., ge=0)
     frecuencia_compra: int = Field(..., ge=0)
     ticket_promedio: float = Field(..., ge=0)
