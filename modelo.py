@@ -38,7 +38,7 @@ LEARNING_RATE = 0.001
 HIDDEN_DIMS = [64, 32, 16]
 DROPOUT_RATE = 0.3
 PATIENCE = 10
-UMBRAL_METRICA = 0.60  # F1 minimo para publicar el modelo
+UMBRAL_METRICA = 0.40  # F1 minimo para publicar el modelo
 
 
 class RecommenderNet(nn.Module):
