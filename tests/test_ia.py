@@ -28,8 +28,8 @@ def _crear_modelo_fake(monkeypatch):
     import app as app_module
     monkeypatch.setattr(app_module, "modelo", dummy)
     monkeypatch.setattr(app_module, "feature_cols", [
-        "num_compras_categoria", "num_vistas_categoria", "num_clics_categoria",
-        "total_gastado_categoria", "dias_ultima_compra", "frecuencia_compra",
+        "num_vistas_categoria", "num_clics_categoria",
+        "dias_ultima_compra", "frecuencia_compra",
         "ticket_promedio", "edad", "acepta_marketing",
     ])
     return dummy
