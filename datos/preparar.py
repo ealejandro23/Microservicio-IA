@@ -107,7 +107,14 @@ def limpiar_usuarios(df):
 def limpiar_clickstream(df):
     df = df.copy()
     filas_antes = len(df)
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce", format="mixed")
+
+    def parse_timestamp(x):
+        try:
+            return pd.to_datetime(x, utc=True)
+        except Exception:
+            return pd.NaT
+
+    df["timestamp"] = df["timestamp"].map(parse_timestamp)
     df = df.dropna(subset=["timestamp"])
     df["es_visitante"] = df["usuario_id"].isnull()
     df["tipo_evento"] = df["tipo_evento"].str.lower().str.strip()
