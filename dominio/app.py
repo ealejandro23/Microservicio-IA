@@ -89,11 +89,11 @@ def _predecir(req: PedirPrediccion, guardar: bool = True):
 
     f = consulta(
         """SELECT count(*)::float AS n_compras_previas,
-                  COALESCE(sum(t.monto),0)::float AS gasto_total,
-                  COALESCE(sum(CASE WHEN p.categoria=%s THEN t.cantidad END),0)::float AS n_clicks_categoria,
-                  COALESCE(CURRENT_DATE - max(t.fecha), 365)::float AS dias_desde_ultima_compra
-           FROM transacciones t JOIN productos p ON p.id=t.producto_id
-           WHERE t.usuario_id=%s""", (req.categoria, req.usuario_id), uno=True)
+                   COALESCE(sum(t.monto),0)::float AS gasto_total,
+                   COALESCE(sum(CASE WHEN p.categoria=%s THEN t.cantidad END),0)::float AS n_clicks_categoria,
+                   COALESCE(CURRENT_DATE - max(t.fecha), 365)::float AS dias_desde_ultima_compra
+            FROM transacciones t JOIN productos p ON p.id=t.producto_id
+            WHERE t.usuario_id=%s""", (req.categoria, req.usuario_id), uno=True)
     entrada = {"categoria": req.categoria, **f}
 
     try:
@@ -151,3 +151,26 @@ def listar(usuario_id: int | None = None, limit: int = 20):
         return consulta("SELECT * FROM predicciones WHERE usuario_id=%s ORDER BY creado_en DESC LIMIT %s",
                         (usuario_id, limit))
     return consulta("SELECT * FROM predicciones ORDER BY creado_en DESC LIMIT %s", (limit,))
+
+
+@app.get("/api/predicciones/{prediction_id}")
+def obtener_prediccion_por_id(prediction_id: int):
+    """Endpoint requerido por la pauta para consultar predicciones por su ID."""
+    prediccion = consulta(
+        """SELECT id, usuario_id, categoria, entrada, probabilidad, prediccion, modelo_version, creado_en 
+           FROM predicciones WHERE id = %s""", 
+        (prediction_id,), 
+        uno=True
+    )
+    if not prediccion:
+        raise HTTPException(status_code=404, detail="Predicción no encontrada")
+    
+    return {
+        "id": prediccion["id"],
+        "user_id": prediccion["usuario_id"],
+        "categoria": prediccion["categoria"],
+        "version": prediccion["modelo_version"],
+        "probabilidad": prediccion["probabilidad"],
+        "prediccion": prediccion["prediccion"],
+        "creado_en": prediccion["creado_en"]
+    }
